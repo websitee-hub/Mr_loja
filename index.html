@@ -5,9 +5,9 @@
 <title>MR Loja</title>
 <style>
 body{font-family:Arial;margin:0;background:#f4f4f4}
-header{background:linear-gradient(90deg,#ff7a00,#ffb347);color:#fff;padding:20px;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:32px;font-weight:bold}
-.login{cursor:pointer;font-size:24px}
+header{background:linear-gradient(90deg,#ff7a00,#ffb347);color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:26px;font-weight:bold}
+.login{cursor:pointer;font-size:22px}
 .container{max-width:1000px;margin:auto;padding:20px}
 .produtos{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px}
 .card{background:#fff;border-radius:12px;padding:15px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
@@ -17,16 +17,15 @@ button{background:#ff7a00;color:#fff;border:none;padding:8px;border-radius:6px;m
 button:hover{background:#e56700}
 .admin-box{display:none;background:#fff;padding:10px;border-radius:10px;margin-bottom:15px}
 input{width:100%;margin:5px 0;padding:8px;border-radius:6px;border:1px solid #ccc}
-.cart{position:fixed;bottom:20px;right:20px;background:#ff7a00;color:#fff;padding:14px 16px;border-radius:50px;cursor:pointer;font-weight:bold}
-.cart-box{position:fixed;bottom:80px;right:20px;background:#fff;padding:12px;border-radius:12px;display:none;width:260px;box-shadow:0 4px 10px rgba(0,0,0,0.15)}
-.item{font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:6px}
-.remove{background:red;padding:4px 6px;border-radius:4px;font-size:12px}
+.cart{position:fixed;bottom:20px;right:20px;background:#ff7a00;color:#fff;padding:12px;border-radius:50px;cursor:pointer}
+.cart-box{position:fixed;bottom:80px;right:20px;background:#fff;padding:10px;border-radius:10px;display:none;width:250px}
+.item{font-size:14px;margin-bottom:5px}
 </style>
 </head>
 <body>
 <header id="logo">
-<div class="logo">🚗 MR LOJA</div>
-<div class="login" onclick="loginGoogle()">🔐</div>
+<div class="logo">🚗 MR Loja</div>
+<div class="login" onclick="loginGoogle()">👤</div>
 </header><div class="container">
 <div id="adminBox" class="admin-box">
 <input id="nome" placeholder="Produto">
@@ -35,7 +34,7 @@ input{width:100%;margin:5px 0;padding:8px;border-radius:6px;border:1px solid #cc
 <button onclick="addProduto()">Adicionar</button>
 </div>
 <div id="listaProdutos" class="produtos"></div>
-</div><div class="cart" onclick="toggleCart()">🧾 R$ <span id="total">0</span></div>
+</div><div class="cart" onclick="toggleCart()">🛒 R$ <span id="total">0</span></div>
 <div id="cartBox" class="cart-box"></div><script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getFirestore,collection,onSnapshot,addDoc,deleteDoc,doc}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -52,7 +51,7 @@ const ADMINS=["lojamr.auto@gmail.com","arthurfigueiredo017@gmail.com"];
 
 let user=null;
 let isAdmin=false;
-let secret=false;
+let unlock=false;
 let carrinho=[];
 let produtos=[];
 
@@ -60,14 +59,14 @@ window.loginGoogle=async()=>{await signInWithPopup(auth,provider)}
 
 onAuthStateChanged(auth,u=>{
 user=u;
-isAdmin=!!(u && secret && ADMINS.includes(u.email.toLowerCase()));
+isAdmin=u&&unlock&&ADMINS.includes(u.email.toLowerCase());
 updateUI();
 });
 
 let clicks=0;
 document.getElementById('logo').addEventListener('click',()=>{
 clicks++;
-if(clicks===5){secret=true;loginGoogle();clicks=0}
+if(clicks===5){unlock=true;loginGoogle();clicks=0}
 setTimeout(()=>clicks=0,1500);
 });
 
@@ -83,9 +82,6 @@ const preco=Number(document.getElementById('preco').value);
 const imagem=document.getElementById('imagem').value.trim();
 if(!nome||!preco||!imagem)return;
 await addDoc(collection(db,'produtos'),{nome,preco,imagem});
-document.getElementById('nome').value='';
-document.getElementById('preco').value='';
-document.getElementById('imagem').value='';
 }
 
 window.excluirProduto=async(id)=>{
@@ -97,10 +93,7 @@ function renderProdutos(){
 const lista=document.getElementById('listaProdutos');
 lista.innerHTML='';
 produtos.forEach(p=>{
-const nomeSafe = JSON.stringify(p.nome);
-const precoSafe = Number(p.preco);
-const idSafe = JSON.stringify(p.id);
-lista.innerHTML+=`<div class="card"><img src="${p.imagem}"><h4>${p.nome}</h4><p class="preco">R$ ${precoSafe}</p><button onclick="addCarrinho(${idSafe},${nomeSafe},${precoSafe})">Adicionar</button>${isAdmin?`<button onclick="excluirProduto(${idSafe})">Excluir</button>`:''}</div>`;
+lista.innerHTML+=`<div class="card"><img src="${p.imagem}"><h4>${p.nome}</h4><p class="preco">R$ ${p.preco}</p><button onclick="addCarrinho('${p.nome}','${p.preco}')">Adicionar</button>${isAdmin?`<button onclick="excluirProduto('${p.id}')">Excluir</button>`:''}</div>`;
 });
 }
 
@@ -110,15 +103,9 @@ snap.forEach(d=>produtos.push({...d.data(),id:d.id}));
 renderProdutos();
 });
 
-window.addCarrinho=(id,nome,preco)=>{
-if(!user){alert('Faça login para comprar');return}
-const item=carrinho.find(p=>p.id===id);
-if(item){item.qtd++}else{carrinho.push({id,nome,preco:Number(preco),qtd:1})}
-renderCart();
-}
-
-window.removerItem=id=>{
-carrinho=carrinho.filter(p=>p.id!==id);
+window.addCarrinho=(nome,preco)=>{
+const item=carrinho.find(p=>p.nome===nome);
+if(item){item.qtd++}else{carrinho.push({nome,preco:Number(preco),qtd:1})}
 renderCart();
 }
 
@@ -128,8 +115,7 @@ let total=0;box.innerHTML='';
 
 carrinho.forEach(p=>{
 total+=p.preco*p.qtd;
-const idSafe = JSON.stringify(p.id);
-box.innerHTML+=`<div class="item"><span>${p.nome} x${p.qtd}</span><button class="remove" onclick="removerItem(${idSafe})">✖</button></div>`;
+box.innerHTML+=`<div class="item">${p.nome} x${p.qtd}</div>`;
 });
 
 box.innerHTML+=`<hr>Total: R$ ${total.toFixed(2)}<br><button onclick="finalizar()">Finalizar</button>`;
@@ -143,7 +129,7 @@ box.style.display=box.style.display==='block'?'none':'block';
 }
 
 window.finalizar=()=>{
-if(!user){alert('Faça login');return}
+if(!user)return alert('Faça login');
 let msg=`Cliente: ${user.displayName}\nEmail: ${user.email}\n\nPedido:\n`;
 let total=0;
 
