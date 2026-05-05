@@ -52,7 +52,7 @@ const ADMINS=["lojamr.auto@gmail.com","arthurfigueiredo017@gmail.com"];
 
 let user=null;
 let isAdmin=false;
-let unlock=false;
+let secret=false;
 let carrinho=[];
 let produtos=[];
 
@@ -60,14 +60,22 @@ window.loginGoogle=async()=>{await signInWithPopup(auth,provider)}
 
 onAuthStateChanged(auth,u=>{
 user=u;
-isAdmin=u&&unlock&&ADMINS.includes(u.email.toLowerCase());
+if(u && secret && ADMINS.includes(u.email.toLowerCase())){
+    isAdmin=true;
+}else{
+    isAdmin=false;
+}
 updateUI();
 });
 
 let clicks=0;
 document.getElementById('logo').addEventListener('click',()=>{
 clicks++;
-if(clicks===5){unlock=true;loginGoogle();clicks=0}
+if(clicks===5){
+    secret=true;
+    loginGoogle();
+    clicks=0;
+}
 setTimeout(()=>clicks=0,1500);
 });
 
